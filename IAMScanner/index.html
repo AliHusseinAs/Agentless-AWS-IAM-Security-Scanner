@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CloudAudit</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/cytoscape@3.26.0/dist/cytoscape.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/qtip2/3.0.3/jquery.qtip.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qtip2/3.0.3/jquery.qtip.min.js"></script>
+  <script src="https://unpkg.com/cytoscape-qtip@2.7.0/cytoscape-qtip.js"></script>
+</head>
+
+<body class="bg-gray-50 min-h-screen flex flex-col items-center justify-start p-8">
+
+  <header class="w-full max-w-6xl mb-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-2">CloudAudit</h1>
+    <p class="text-gray-600">AWS IAM Vulnerability Scanner</p>
+  </header>
+
+
+  <div class="bg-white shadow-xl rounded-lg p-4 w-full max-w-6xl">
+    <div id="cy" class="h-[800px] w-full rounded"></div>
+  </div>
+
+  <footer class="mt-8 text-gray-400 text-sm">
+    &copy; 2025 CloudAuditX
+  </footer>
+
+  <script>
+    fetch('violations.json')
+      .then(response => response.json())
+      .then(data => {
+        const elements = [];
+        const cisNodes = new Set();
+        const mitreNodes = new Set();
+
+        data.forEach(item => {
+          const cisId = "CIS " + item.cis_id;
+          const cisName = item.cis_name;
+          const mitreID = item.mitre_id;
+          const mitreName = item.mitre;
+
+
+          if (!cisNodes.has(cisId)) {
+            elements.push({
+              data: { id: cisId, label: cisId, detail: cisName, type: 'cis' }
+            });
+            cisNodes.add(cisId);
+          }
+
+
+          if (!mitreNodes.has(mitreID)) {
+            elements.push({
+              data: { id: mitreID, label: mitreID, detail: mitreName, type: 'mitre' }
+            });
+            mitreNodes.add(mitreID);
+          }
+
+
+          elements.push({
+            data: { source: cisId, target: mitreID }
+          });
+        });
+
+        const cy = cytoscape({
+          container: document.getElementById('cy'),
+          elements: elements,
+          style: [
+            {
+              selector: 'node[type="cis"]',
+              style: {
+                'shape': 'roundrectangle',
+                'background-color': '#2563EB',
+                'label': 'data(label)',
+                'color': '#fff',
+                'text-valign': 'center',
+                'text-halign': 'center',
+                'padding': '10px',
+                'font-size': '12px'
+              }
+            },
+            {
+              selector: 'node[type="mitre"]',
+              style: {
+                'shape': 'ellipse',
+                'background-color': '#DC2626',
+                'label': 'data(label)',
+                'color': '#fff',
+                'text-valign': 'center',
+                'text-halign': 'center',
+                'padding': '10px',
+                'font-size': '12px'
+              }
+            },
+            {
+              selector: 'edge',
+              style: {
+                'width': 2,
+                'line-color': '#9CA3AF',
+                'target-arrow-color': '#9CA3AF',
+                'target-arrow-shape': 'triangle',
+                'curve-style': 'bezier'
+              }
+            }
+          ],
+          layout: {
+            name: 'cose',
+            animate: true
+          }
+        });
+
+
+        cy.nodes().forEach(function(ele){
+          ele.qtip({
+            content: ele.data('detail'),
+            position: {
+              my: 'top center',
+              at: 'bottom center'
+            },
+            style: {
+              classes: 'qtip-bootstrap',
+              tip: { width: 16, height: 8 }
+            }
+          });
+        });
+
+      })
+      .catch(error => {
+        console.error('Error loading JSON:', error);
+      });
+  </script>
+
+</body>
+</html>
+
